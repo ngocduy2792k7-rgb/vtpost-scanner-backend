@@ -65,23 +65,30 @@ app.get('/api/dashboard/stats', async (req, res) => {
     try {
         const [[{total}]] = await pool.execute('SELECT COUNT(*) as total FROM shipments');
         const [[{valid}]] = await pool.execute("SELECT COUNT(*) as valid FROM shipments WHERE status = 'RECEIVED'");
-        // Trả về đúng cấu trúc mà Frontend đang chờ đợi
+        
+        const result = {
+            total_shipments: total,
+            valid_scans: valid
+        };
+
+        // GỬI ĐA DẠNG KIỂU ĐỂ KIỂU GÌ CŨNG TRÚNG!
         res.json({ 
             success: true, 
-            stats: {
-                total_shipments: total, 
-                valid_scans: valid 
-            }
+            stats: result,      // Kiểu 1: Bọc trong stats
+            data: result,       // Kiểu 2: Bọc trong data
+            total_shipments: total, // Kiểu 3: Để trần
+            valid_scans: valid      // Kiểu 3: Để trần
         });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
+
 
 // --- THÊM API LỊCH SỬ ĐỂ HẾT LỖI 404 ---
 app.get('/api/scan/logs', async (req, res) => {
     try {
         const [rows] = await pool.execute("SELECT tracking_code, status, updated_at FROM shipments WHERE status = 'RECEIVED' ORDER BY updated_at DESC LIMIT 20");
-        res.json({ success: true, logs: rows });
+        // Gửi cả logs và data.logs cho chắc
+        res.json({ success: true, logs: rows, data: rows });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
-
 app.listen(process.env.PORT || 10000, '0.0.0.0', () => console.log('🚀 Server Ready!'));
