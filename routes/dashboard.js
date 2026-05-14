@@ -35,8 +35,8 @@ router.get('/stats', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Dashboard stats error:', error);
-    res.status(500).json({ success: false, message: 'Internal server error' });
+    console.error('Stack Error in /api/dashboard/stats:', error);
+    res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ: ' + error.message });
   }
 });
 
