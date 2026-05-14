@@ -10,6 +10,8 @@ const pool = mysql.createPool({
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 0,
   ssl: {
       rejectUnauthorized: false
   }
@@ -17,7 +19,7 @@ const pool = mysql.createPool({
 
 const promisePool = pool.promise();
 
-// Kiểm tra kết nối
+// Kiểm tra kết nối ban đầu
 promisePool.getConnection()
   .then(connection => {
     console.log('Connected to MySQL Database');
@@ -26,5 +28,14 @@ promisePool.getConnection()
   .catch(err => {
     console.error('Error connecting to MySQL:', err);
   });
+
+// Ping database mỗi 30 giây để giữ connection luôn sống (Tránh lỗi trên Render/Vercel)
+setInterval(async () => {
+  try {
+    await promisePool.query('SELECT 1');
+  } catch (error) {
+    console.error('Database ping failed. Checking connection...', error.message);
+  }
+}, 30000);
 
 module.exports = promisePool;

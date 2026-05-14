@@ -89,8 +89,8 @@ router.post('/import', upload.single('file'), async (req, res) => {
 
     res.json({ success: true, message: `Đã import thành công ${importedCount} vận đơn`, count: importedCount });
   } catch (error) {
-    console.error('Import error:', error);
-    res.status(500).json({ success: false, message: 'Lỗi khi xử lý file import' });
+    console.error('Stack Error in /api/data/import:', error);
+    res.status(500).json({ success: false, message: 'Lỗi khi xử lý file import: ' + error.message });
   }
 });
 
@@ -115,8 +115,8 @@ router.get('/export', async (req, res) => {
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.send(buffer);
   } catch (error) {
-    console.error('Export error:', error);
-    res.status(500).json({ success: false, message: 'Lỗi khi xuất file báo cáo' });
+    console.error('Stack Error in /api/data/export:', error);
+    res.status(500).json({ success: false, message: 'Lỗi khi xuất file báo cáo: ' + error.message });
   }
 });
 
@@ -135,8 +135,8 @@ router.post('/reset', async (req, res) => {
 
     res.json({ success: true, message: 'Hệ thống đã được xóa sạch dữ liệu. Trạng thái như mới.' });
   } catch (error) {
-    console.error('Reset error:', error);
-    res.status(500).json({ success: false, message: 'Lỗi khi reset dữ liệu' });
+    console.error('Stack Error in /api/data/reset:', error);
+    res.status(500).json({ success: false, message: 'Lỗi khi reset dữ liệu: ' + error.message });
   }
 });
 

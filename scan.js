@@ -15,32 +15,32 @@ const normalizeCode = (code) => {
 // POST /api/scan
 // Xử lý quét mã
 router.post('/', async (req, res) => {
-  let { tracking_code, user_id } = req.body;
-  
-  if (!tracking_code) {
-    return res.status(400).json({ success: false, message: 'Tracking code is required' });
-  }
-
-  // Chuẩn hóa mã trước khi xử lý
-  tracking_code = normalizeCode(tracking_code);
-
-  // Lọc mã: tối thiểu 5 ký tự
-  if (tracking_code.length < 5) {
-    return res.json({ success: false, message: 'Mã quá ngắn hoặc không hợp lệ' });
-  }
-
   try {
+    let { tracking_code, user_id } = req.body;
+    
+    if (!tracking_code) {
+      return res.status(400).json({ success: false, message: 'Tracking code is required' });
+    }
+
+    // Chuẩn hóa mã trước khi xử lý
+    tracking_code = normalizeCode(tracking_code);
+
+    // Lọc mã: tối thiểu 5 ký tự
+    if (tracking_code.length < 5) {
+      return res.json({ success: false, message: 'Mã quá ngắn hoặc không hợp lệ' });
+    }
+
     // 1. Kiểm tra mã trong bảng shipments
     const [shipments] = await db.execute('SELECT * FROM shipments WHERE tracking_code = ?', [tracking_code]);
     
     if (shipments.length === 0) {
-      // KHÔNG CÓ TRONG DS
+      // KHÔNG CÓ TRONG DS -> Đổi thành INVALID để đúng ENUM trong DB
       await db.execute('INSERT INTO scanned_logs (tracking_code, status, user_id) VALUES (?, ?, ?)', 
-        [tracking_code, 'NOT_FOUND', user_id || null]);
+        [tracking_code, 'INVALID', user_id || null]);
         
       return res.json({
         success: true,
-        status: 'NOT_FOUND',
+        status: 'INVALID',
         message: 'KHÔNG CÓ TRONG DS',
         tracking_code
       });
@@ -63,25 +63,25 @@ router.post('/', async (req, res) => {
       });
     }
 
-    // 3. Tồn tại và chưa scan -> THÀNH CÔNG
+    // 3. Tồn tại và chưa scan -> THÀNH CÔNG -> Đổi thành VALID để đúng ENUM
     // Cập nhật trạng thái shipments
     await db.execute('UPDATE shipments SET status = "RECEIVED", updated_at = NOW() WHERE tracking_code = ?', [tracking_code]);
     
     // Ghi log
     await db.execute('INSERT INTO scanned_logs (tracking_code, status, user_id) VALUES (?, ?, ?)', 
-      [tracking_code, 'SUCCESS', user_id || null]);
+      [tracking_code, 'VALID', user_id || null]);
 
     return res.json({
       success: true,
-      status: 'SUCCESS',
+      status: 'VALID',
       message: 'ĐÃ NHẬN',
       tracking_code,
       customer_name: shipment.customer_name
     });
 
   } catch (error) {
-    console.error('Scan error:', error);
-    res.status(500).json({ success: false, message: 'Internal server error' });
+    console.error('Stack Error in /api/scan:', error);
+    res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ: ' + error.message });
   }
 });
 
@@ -97,10 +97,9 @@ router.get('/logs', async (req, res) => {
     `);
     res.json({ success: true, data: rows });
   } catch (error) {
-    console.error('Get logs error:', error);
-    res.status(500).json({ success: false, message: 'Internal server error' });
+    console.error('Stack Error in /api/scan/logs:', error);
+    res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ: ' + error.message });
   }
 });
-
 
 module.exports = router;
